@@ -1,0 +1,123 @@
+.mapArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  min-height: 100vh;
+}
+
+.grid {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  height: 56px;
+}
+
+.cell {
+  width: 62px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.tile {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  border: none;
+  padding: 6px 7px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--tile);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  position: relative;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  background: var(--tile-hover);
+}
+
+.tileCentered {
+  align-items: center;
+  justify-content: center;
+}
+
+.abbr {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--slate);
+}
+
+.tileTopRow,
+.tileBottomRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.tileAbbrStrong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tileOrder {
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  color: var(--faint);
+}
+
+.tileCount {
+  font-family: var(--font-geist-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.tileDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.selected {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.pathSvg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--slate);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
