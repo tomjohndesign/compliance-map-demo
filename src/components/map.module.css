@@ -131,3 +131,12 @@
   border-radius: 4px;
   flex-shrink: 0;
 }
+
+@container (max-width: 740px) { .grid { zoom: .8; } .legend { flex-wrap: wrap; justify-content: center; } }
+@container (max-width: 610px) { .grid { zoom: .68; } }
+@container (max-width: 510px) { .grid { zoom: .55; } }
+@container (max-width: 400px) { .grid { zoom: .44; } }
+
+@media (max-width: 650px) {
+  .mapArea { min-height: 0; padding: 24px 12px; }
+}

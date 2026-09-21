@@ -80,7 +80,12 @@ export function seedForDate(today: string): { stays: Stay[]; planned: PlannedSto
 export const DEFAULT_SETTINGS: Settings = {
   salary: 120_000,
   margin: 0.75,
-  residence: "PA",
+  residence: "TN",
+  assignedWorkState: "TN",
+  trackingStart: "2026-01-01",
+  federalReturnRequired: "unknown",
+  ilMobileWorkerConfirmed: false,
+  regularWagesOnly: true,
   routeStart: "2026-09-22",
   theme: "system",
 };

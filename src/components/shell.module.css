@@ -12,4 +12,21 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  container-type: inline-size;
+}
+
+@media (max-width: 1000px) {
+  .shell { flex-wrap: wrap; }
+  .center { flex-basis: calc(100% - 260px); }
+  .shell > aside:last-child { width: 100%; height: auto; position: static; border-top: 1px solid var(--rule); }
+}
+@media (max-width: 650px) {
+  .shell { display: block; }
+  .shell > aside:first-child { width: 100%; height: auto; position: static; max-height: 350px; }
+  .center { width: 100%; }
+}
+
+@media print {
+  .shell { display: block; height: auto; min-height: 0; background: white; }
+  .center { display: block; overflow: visible; height: auto; container-type: normal; }
 }

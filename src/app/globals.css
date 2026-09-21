@@ -102,3 +102,13 @@ select {
     background: #fff;
   }
 }
+
+@media print {
+  :root, [data-theme="dark"] {
+    color-scheme: light;
+    --bg: white; --surface: white; --ink: #16202b; --slate: #4b5563;
+    --faint: #5c6670; --rule: #ccd1d6; --navy: #1b3a5c;
+    --caution-soft: #f7eeda; --caution-deep: #7a5306;
+  }
+  html, body { height: auto; }
+}

@@ -23,7 +23,7 @@ export function SidebarLeft() {
       ...agg,
       stays: [...agg.stays].sort((a, b) => b.to.localeCompare(a.to)),
     }))
-    .sort((a, b) => b.stays[0].to.localeCompare(a.stays[0].to));
+    .sort((a, b) => b.lastDay.localeCompare(a.lastDay));
 
   const footer =
     mode === "past" ? (
@@ -39,7 +39,7 @@ export function SidebarLeft() {
         </button>
         <span className={styles.footerNote}>
           {fmtShort(past[0]?.firstDay ?? today)} – {fmtShort(today)} ·{" "}
-          {[...outcomes.values()].filter((o) => o.coHit).length} states triggered withholding
+          {[...outcomes.values()].filter((o) => o.withholding.value === true).length} states need withholding review
         </span>
       </>
     ) : (
@@ -62,7 +62,7 @@ export function SidebarLeft() {
       <div className={styles.header}>
         <div className={styles.titleBlock}>
           <span className={styles.title}>State Lines</span>
-          <span className={styles.subtitle}>Work-day routing &amp; tax exposure</span>
+          <span className={styles.subtitle}>Work locations &amp; payroll planning</span>
         </div>
         <SettingsMenu />
       </div>
@@ -99,7 +99,7 @@ export function SidebarLeft() {
                     style={{ background: LEVEL_COLOR[outcome.level] }}
                   />
                   <span className={styles.groupName}>{STATES[agg.state].name}</span>
-                  <span className={styles.groupWd}>{agg.workDays} wd</span>
+                  <span className={styles.groupWd}>{agg.workDays} wd{agg.projectedDays ? ` + ${agg.projectedDays} proj.` : ""}</span>
                 </button>
                 {agg.stays.map((sa) => (
                   <div key={sa.stay.id} className={styles.stayRow}>
@@ -127,7 +127,10 @@ export function SidebarLeft() {
         )}
       </div>
 
-      <div className={styles.footer}>{footer}</div>
+      <div className={styles.footer}>
+        {mode === "past" && <button className={styles.primaryBtn} onClick={() => { setPastView(pastView === "ledger" ? "map" : "ledger"); select(null); }}>{pastView === "ledger" ? "Back to map" : "Review work ledger"}</button>}
+        {footer}
+      </div>
     </aside>
   );
 }
@@ -139,8 +142,7 @@ function FutureList() {
   if (scheduled.length === 0) {
     return (
       <div className={styles.emptyList}>
-        No stays on the route yet. Pick a state on the map — the panel on the right shows its
-        thresholds before you commit. Stays chain off each other: each starts the day after the
+        No stays on the route yet. Pick an employer-permitted state on the map to review a forecast. Stays chain off each other: each starts the day after the
         last ends.
       </div>
     );
