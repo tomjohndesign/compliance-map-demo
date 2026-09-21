@@ -76,6 +76,16 @@
   color: var(--faint);
 }
 
+.pastOrder {
+  font-family: var(--font-geist-mono);
+  font-size: 9px;
+  color: var(--navy);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: 2px;
+}
+
 .tileCount {
   font-family: var(--font-geist-mono);
   font-size: 10px;

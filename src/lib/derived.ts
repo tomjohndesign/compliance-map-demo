@@ -6,6 +6,7 @@ import {
   dailyRate,
   pastAggregates,
   pastOutcome,
+  pastRouteStates,
   scheduleRoute,
   type Clocks,
   type Outcome,
@@ -18,6 +19,8 @@ export interface Derived {
   rate: number;
   /** per-state aggregates through today, in order of first visit */
   past: StateAgg[];
+  /** chronological state visits, collapsing only consecutive same-state stays */
+  pastRoute: string[];
   pastByState: Map<string, StateAgg>;
   outcomes: Map<string, Outcome>;
   scheduled: ScheduledStop[];
@@ -30,6 +33,7 @@ export function useDerived(): Derived {
   return useMemo(() => {
     const rate = dailyRate(settings.salary);
     const past = pastAggregates(stays, today);
+    const pastRoute = pastRouteStates(stays, today);
     const pastByState = new Map(past.map((a) => [a.state, a]));
     const outcomes = new Map(
       past.map((a) => [a.state, pastOutcome(a.state, a.workDays, rate)])
@@ -38,6 +42,6 @@ export function useDerived(): Derived {
     const scheduled = scheduleRoute(planned, settings.routeStart, pastWd, rate, settings.margin);
     const clocks = computeClocks(stays, scheduled, settings, today);
     const routeAlerts = scheduled.filter((s) => s.verdict.level === "triggered").length;
-    return { rate, past, pastByState, outcomes, scheduled, clocks, routeAlerts };
+    return { rate, past, pastRoute, pastByState, outcomes, scheduled, clocks, routeAlerts };
   }, [stays, planned, settings, today]);
 }
