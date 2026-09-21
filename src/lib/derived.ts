@@ -1,6 +1,6 @@
 "use client";
 import { useMemo } from "react";
-import { currentRun } from "./engine";
+import { currentRun, pastRouteStates } from "./engine";
 import { useApp } from "./store";
 import { STATES } from "./states";
 import { coverageIssues, dayCount, jurisdiction, mergeLedger, projectStays } from "./ledger/model";
@@ -25,7 +25,7 @@ export function useDerived() {
     const past = codes.filter(code => STATES[code]).map(state => {
       const matching = current.filter(d => d.sessions.some(s => s.state === state));
       const recorded = matching.filter(d => d.status !== "projected");
-      return { state, firstDay: matching[0].date, workDays: recorded.reduce((n, d) => n + dayCount(d, STATES[state].country === "CA" ? `CA-${state}` : state), 0),
+      return { state, firstDay: matching[0].date, lastDay: matching.at(-1)!.date, workDays: recorded.reduce((n, d) => n + dayCount(d, STATES[state].country === "CA" ? `CA-${state}` : state), 0),
         projectedDays: outcomes.get(state)!.projectedDays, calDays: matching.length,
         stays: stays.filter(s => s.state === state && s.start <= today && s.end >= yearStart).map(stay => ({ stay, from: stay.start < yearStart ? yearStart : stay.start, to: stay.end > today ? today : stay.end })),
       };
@@ -33,6 +33,6 @@ export function useDerived() {
     const scheduled = forecastRoute(planned, days, settings, payrollActive);
     const routeAlerts = scheduled.filter(s => s.outcome.status !== "clear" && s.outcome.status !== "active").length;
     const workedStates = new Set(current.filter(d => d.status !== "projected").flatMap(d => d.sessions.filter(s => s.activity === "work").map(jurisdiction)));
-    return { days, past, pastByState: new Map(past.map(a => [a.state, a])), outcomes, scheduled, clocks: { run: currentRun(stays, today) }, routeAlerts, workedStates };
+    return { days, past, pastRoute: pastRouteStates(stays, today), pastByState: new Map(past.map(a => [a.state, a])), outcomes, scheduled, clocks: { run: currentRun(stays, today) }, routeAlerts, workedStates };
   }, [stays, planned, settings, today, ledger, payPeriods, payrollActive]);
 }

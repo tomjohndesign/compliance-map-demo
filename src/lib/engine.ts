@@ -28,6 +28,18 @@ export function attributeDays(stays: Stay[]): Map<string, Stay> {
 }
 
 
+/** State visits in travel order, including returns after an intervening trip. */
+export function pastRouteStates(stays: Stay[], cutoffISO: string): string[] {
+  const byDay = attributeDays(stays);
+  const route: string[] = [];
+  for (const day of [...byDay.keys()].sort()) {
+    if (day > cutoffISO) break;
+    const state = byDay.get(day)!.state;
+    if (route[route.length - 1] !== state) route.push(state);
+  }
+  return route;
+}
+
 export interface CurrentRun {
   state: string;
   startISO: string;

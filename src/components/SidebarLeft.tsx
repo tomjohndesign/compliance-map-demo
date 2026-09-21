@@ -18,6 +18,12 @@ const LEVEL_COLOR: Record<RiskLevel, string> = {
 export function SidebarLeft() {
   const { mode, setMode, selected, select, setPastView, setAddHint, pastView, today } = useApp();
   const { past, outcomes, scheduled, clocks, routeAlerts } = useDerived();
+  const recentPast = past
+    .map((agg) => ({
+      ...agg,
+      stays: [...agg.stays].sort((a, b) => b.to.localeCompare(a.to)),
+    }))
+    .sort((a, b) => b.lastDay.localeCompare(a.lastDay));
 
   const footer =
     mode === "past" ? (
@@ -77,7 +83,7 @@ export function SidebarLeft() {
 
       <div className={styles.list}>
         {mode === "past" ? (
-          past.map((agg) => {
+          recentPast.map((agg) => {
             const outcome = outcomes.get(agg.state)!;
             return (
               <div

@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { useApp } from "@/lib/store";
 import { useDerived } from "@/lib/derived";
 import { GRID_ROWS, STATES } from "@/lib/states";
@@ -28,7 +29,14 @@ const SOLID: Record<RiskLevel, string> = {
 
 export function TileMap() {
   const { mode, selected, select } = useApp();
-  const { pastByState, outcomes, scheduled, clocks } = useDerived();
+  const { pastByState, pastRoute, outcomes, scheduled, clocks } = useDerived();
+  const arrowId = useId();
+  const pastOrders = new Map<string, number[]>();
+  pastRoute.forEach((code, index) => {
+    const orders = pastOrders.get(code) ?? [];
+    orders.push(index + 1);
+    pastOrders.set(code, orders);
+  });
 
   // Future mode: first order index + totals per state on the route.
   const routeByState = new Map<
@@ -52,20 +60,19 @@ export function TileMap() {
     }
   }
 
-  // Journey path through the current location then each stop, skipping repeats.
-  const pathStates: string[] = [];
+  // Past follows attributed days; future starts at the current location.
+  // Only consecutive repeats are skipped, so return visits remain on the path.
+  const pathStates: string[] = mode === "past" ? pastRoute : [];
   if (mode === "future") {
     if (clocks.run) pathStates.push(clocks.run.state);
     for (const s of scheduled) {
       if (pathStates[pathStates.length - 1] !== s.stop.state) pathStates.push(s.stop.state);
     }
   }
-  const pathPoints = pathStates
-    .map((code) => {
-      const info = STATES[code];
-      return `${(info.col - 1) * PITCH + HALF},${info.row * PITCH + HALF}`;
-    })
-    .join(" ");
+  const pathPoints = pathStates.map((code) => {
+    const info = STATES[code];
+    return { x: (info.col - 1) * PITCH + HALF, y: info.row * PITCH + HALF };
+  });
 
   return (
     <main className={styles.mapArea}>
@@ -90,20 +97,53 @@ export function TileMap() {
             })}
           </div>
         ))}
-        {mode === "future" && pathStates.length > 1 && (
+        {pathStates.length > 1 && (
           <svg
             className={styles.pathSvg}
             width={11 * PITCH - 6}
             height={8 * PITCH - 6}
             fill="none"
+            role="img"
+            aria-label={`${mode === "past" ? "Past travel" : "Planned route"}: ${pathStates.map((code) => STATES[code].name).join(" → ")}`}
           >
-            <polyline
-              points={pathPoints}
-              stroke="var(--path)"
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              fill="none"
-            />
+            {mode === "past" ? (
+              <>
+                <defs>
+                  <marker
+                    id={arrowId}
+                    viewBox="0 0 8 8"
+                    refX="4"
+                    refY="4"
+                    markerWidth="6"
+                    markerHeight="6"
+                    orient="auto"
+                  >
+                    <path d="M 1 1 L 7 4 L 1 7" stroke="var(--navy)" strokeWidth="1.5" />
+                  </marker>
+                </defs>
+                {pathPoints.slice(1).map((point, index) => {
+                  const from = pathPoints[index];
+                  return (
+                    <polyline
+                      key={index}
+                      points={`${from.x},${from.y} ${(from.x + point.x) / 2},${(from.y + point.y) / 2} ${point.x},${point.y}`}
+                      stroke="var(--navy)"
+                      strokeWidth="1.5"
+                      strokeOpacity="0.6"
+                      markerMid={`url(#${arrowId})`}
+                    />
+                  );
+                })}
+              </>
+            ) : (
+              <polyline
+                points={pathPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+                stroke="var(--path)"
+                strokeWidth="1.5"
+                strokeDasharray="4 4"
+                fill="none"
+              />
+            )}
           </svg>
         )}
       </div>
@@ -121,16 +161,20 @@ export function TileMap() {
       const agg = pastByState.get(code);
       if (agg && agg.workDays >= 0 && agg.calDays > 0) {
         const level = outcomes.get(code)!.level;
+        const orders = pastOrders.get(code) ?? [];
         return (
           <button
             className={styles.tile + sel}
             style={{ background: SOFT[level] }}
             onClick={onClick}
-            aria-label={`${info.name}, ${agg.workDays} work days`}
+            aria-label={`${info.name}, ${agg.workDays} work days${orders.length ? `, travel ${orders.length === 1 ? "visit" : "visits"} ${orders.join(", ")}` : ""}`}
           >
             <div className={styles.tileTopRow}>
               <span className={styles.tileAbbrStrong} style={{ color: DEEP[level] }}>
                 {code}
+              </span>
+              <span className={styles.pastOrder} title={`Travel order: ${orders.join(", ")}`}>
+                {orders.join(",")}
               </span>
             </div>
             <div className={styles.tileBottomRow}>
@@ -230,7 +274,14 @@ export function TileMap() {
             {label}
           </span>
         ))}
-        {mode === "future" && (
+        {mode === "past" ? (
+          <span className={styles.legendItem}>
+            <svg width="22" height="10" fill="none" aria-hidden="true">
+              <path d="M 0 5 H 21 M 16 1 L 21 5 L 16 9" stroke="var(--navy)" strokeWidth="1.5" />
+            </svg>
+            Travel order · 1 = first state
+          </span>
+        ) : (
           <span className={styles.legendItem}>
             <svg width="22" height="2">
               <line
