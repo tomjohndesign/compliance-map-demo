@@ -28,17 +28,19 @@ export const isWeekday = (d: Date) => d.getDay() > 0 && d.getDay() < 6;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function fmtShort(iso: string): string {
+export function fmtShort(iso: string, includeYear = false): string {
   const d = parseISO(iso);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}${includeYear ? `, ${d.getFullYear()}` : ""}`;
 }
 
-export function fmtRange(startISO: string, endISO: string): string {
-  if (startISO === endISO) return fmtShort(startISO);
+export function fmtRange(startISO: string, endISO: string, includeYear = false): string {
+  if (startISO === endISO) return fmtShort(startISO, includeYear);
   const s = parseISO(startISO);
   const e = parseISO(endISO);
-  if (s.getMonth() === e.getMonth()) return `${MONTHS[s.getMonth()]} ${s.getDate()} – ${e.getDate()}`;
-  return `${fmtShort(startISO)} – ${fmtShort(endISO)}`;
+  if (s.getFullYear() !== e.getFullYear()) return `${fmtShort(startISO, true)} – ${fmtShort(endISO, true)}`;
+  const year = includeYear ? `, ${e.getFullYear()}` : "";
+  if (s.getMonth() === e.getMonth()) return `${MONTHS[s.getMonth()]} ${s.getDate()} – ${e.getDate()}${year}`;
+  return `${fmtShort(startISO)} – ${fmtShort(endISO)}${year}`;
 }
 
 export function fmtMoney(n: number): string {

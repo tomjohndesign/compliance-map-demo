@@ -54,7 +54,7 @@ export function ReportView() {
         <div>
           <h1 className={styles.title}>Compliance report — 2026</h1>
           <p className={styles.sub}>
-            Jan 1 – {fmtShort(today)} · prepared {fmtShort(today)} · fictional demo thresholds · salary{" "}
+            {fmtShort(past[0]?.firstDay ?? today)} – {fmtShort(today)} · prepared {fmtShort(today)} · fictional demo thresholds · salary{" "}
             {fmtMoney(settings.salary)} ≈ {fmtMoney(rate)}/work day
           </p>
           <div className={styles.statRow}>

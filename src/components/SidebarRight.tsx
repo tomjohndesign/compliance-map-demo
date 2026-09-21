@@ -80,7 +80,7 @@ function DefaultPanel() {
           {scheduled.length > 0 ? (
             <>
               <span className={styles.routeDates}>
-                {fmtShort(settings.routeStart)} → {fmtShort(scheduled[scheduled.length - 1].endISO)}
+                {fmtShort(settings.routeStart, true)} → {fmtShort(scheduled[scheduled.length - 1].endISO, true)}
               </span>
               <span className={styles.meta}>
                 {scheduled.reduce((n, s) => n + s.stop.lengthDays, 0)} days ·{" "}
@@ -114,7 +114,7 @@ function DefaultPanel() {
       ) : (
         <div className={styles.stack}>
           <span className={styles.sectionLabel}>2026 so far</span>
-          <span className={styles.routeDates}>Jan 1 → {fmtShort(today)}</span>
+          <span className={styles.routeDates}>{fmtShort(past[0]?.firstDay ?? today)} → {fmtShort(today)}</span>
           <span className={styles.meta}>
             {past.length} states · {past.reduce((n, a) => n + a.workDays, 0)} work days logged
           </span>
@@ -153,7 +153,7 @@ function DefaultPanel() {
           sub={
             mode === "future" && scheduled.length > 0
               ? "Includes the planned route"
-              : "All non-residence days, Jan 1 to date"
+              : "All logged non-residence days to date"
           }
         />
         <Clock
