@@ -4,6 +4,7 @@ import { AppProvider, useApp } from "@/lib/store";
 import { SidebarLeft } from "./SidebarLeft";
 import { SidebarRight } from "./SidebarRight";
 import { TileMap } from "./TileMap";
+import { LedgerView } from "./LedgerView";
 import { ReportView } from "./ReportView";
 import styles from "./shell.module.css";
 
@@ -13,7 +14,7 @@ function Shell() {
   return (
     <div className={styles.shell}>
       <SidebarLeft />
-      <div className={styles.center}>{showReport ? <ReportView /> : <TileMap />}</div>
+      <div className={styles.center}>{showReport ? <ReportView /> : mode === "past" && pastView === "ledger" ? <LedgerView /> : <TileMap />}</div>
       <SidebarRight />
     </div>
   );

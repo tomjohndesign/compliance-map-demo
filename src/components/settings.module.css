@@ -1,5 +1,7 @@
 .popup {
-  width: 320px;
+  width: 340px;
+  max-height: min(760px, 85vh);
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;

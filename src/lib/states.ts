@@ -1,4 +1,4 @@
-import type { Rule, StateInfo } from "./types";
+import type { StateInfo } from "./types";
 
 type MapMeta = Pick<StateInfo, "name" | "row" | "col" | "country">;
 
@@ -59,40 +59,8 @@ const MAP: Record<string, MapMeta> = {
   AB: { name: "Alberta · CAN", row: 0, col: 2, country: "CA" },
 };
 
-interface DemoPattern {
-  filing: Rule | null;
-  withholding: Rule | null;
-  filingText: string;
-  withholdingText: string;
-}
-
-/**
- * Fictional profiles that exercise each rule shape in the UI. They do not
- * represent tax law or any employer's policies.
- */
-const DEMO_PATTERNS: DemoPattern[] = [
-  { filing: { d: 5 }, withholding: { d: 3 }, filingText: "Demo: after 5 work days", withholdingText: "Demo: after 3 work days" },
-  { filing: { d: 15 }, withholding: { d: 10 }, filingText: "Demo: after 15 work days", withholdingText: "Demo: after 10 work days" },
-  { filing: { usd: 5_000 }, withholding: { usd: 4_000 }, filingText: "Demo: above $5,000", withholdingText: "Demo: above $4,000" },
-  { filing: { and: { d: 8, usd: 4_000 } }, withholding: { any: { d: 12, usd: 5_000 } }, filingText: "Demo: after 8 days and $4,000", withholdingText: "Demo: after 12 days or $5,000" },
-  { filing: null, withholding: null, filingText: "Demo: no trigger", withholdingText: "Demo: no trigger" },
-];
-
-export const STATES: Record<string, StateInfo> = Object.fromEntries(
-  Object.entries(MAP).map(([code, meta], index) => {
-    const pattern = code === "PA" ? DEMO_PATTERNS[4] : DEMO_PATTERNS[index % DEMO_PATTERNS.length];
-    return [
-      code,
-      {
-        ...meta,
-        ...pattern,
-        employerRegistered: meta.country !== "CA" && (code === "PA" || index % 3 !== 0),
-        nrForm: pattern.filing ? `Sample ${code} nonresident return` : undefined,
-        estRate: pattern.filing ? 0.05 : undefined,
-      },
-    ];
-  })
-);
+/** Geography only. Policy and tax rules live in independent modules. */
+export const STATES: Record<string, StateInfo> = MAP;
 
 export const STATE_CODES = Object.keys(STATES);
 

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Popover } from "@base-ui/react/popover";
-import { fmtMoney, dailyRate } from "@/lib/engine";
+import { fmtMoney } from "@/lib/engine";
+import { STATES } from "@/lib/states";
 import { useApp } from "@/lib/store";
 import type { ThemePref } from "@/lib/types";
 import sidebarStyles from "./sidebar.module.css";
@@ -46,6 +47,7 @@ export function SettingsMenu() {
               <div className={styles.inputRow}>
                 <input
                   className={styles.input}
+                  aria-label="Annual salary"
                   inputMode="numeric"
                   value={salaryText ?? `$${settings.salary.toLocaleString("en-US")}`}
                   onChange={(e) => setSalaryText(e.target.value)}
@@ -53,7 +55,7 @@ export function SettingsMenu() {
                   onKeyDown={(e) => e.key === "Enter" && commitSalary(e.currentTarget.value)}
                 />
                 <span className={styles.inputHint}>
-                  ≈ {fmtMoney(dailyRate(settings.salary))} / work day
+                  ≈ {fmtMoney((settings.salary / 260))} / work day
                 </span>
               </div>
             </div>
@@ -63,31 +65,46 @@ export function SettingsMenu() {
               <div className={styles.inputRow}>
                 <input
                   className={styles.input}
+                  aria-label="Safety margin"
                   inputMode="numeric"
                   value={marginText ?? `${Math.round(settings.margin * 100)}%`}
                   onChange={(e) => setMarginText(e.target.value)}
                   onBlur={(e) => commitMargin(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && commitMargin(e.currentTarget.value)}
                 />
-                <span className={styles.inputHint}>of each demo threshold</span>
+                <span className={styles.inputHint}>planning margin, not law</span>
               </div>
             </div>
 
             <div className={styles.field}>
               <span className={styles.label}>Residence state</span>
-              <div className={styles.segRow}>
-                {(["PA", "FL"] as const).map((code) => (
-                  <button
-                    key={code}
-                    className={`${styles.segBtn} ${settings.residence === code ? styles.segBtnActive : ""}`}
-                    onClick={() => updateSettings({ residence: code })}
-                  >
-                    {code === "PA" ? "Pennsylvania" : "Florida"}
-                  </button>
-                ))}
-              </div>
-              <span className={styles.hint}>Drives the 120-days-outside demo clock.</span>
+              <select aria-label="Residence state" className={styles.input} value={settings.residence} onChange={e => updateSettings({ residence: e.target.value })}>
+                {Object.entries(STATES).filter(([, s]) => s.country !== "CA").map(([code, s]) => <option key={code} value={code}>{s.name}</option>)}
+              </select>
             </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="assigned-state">Employer-assigned work state</label>
+              <select id="assigned-state" className={styles.input} value={settings.assignedWorkState} onChange={e => updateSettings({ assignedWorkState: e.target.value })}>
+                {Object.entries(STATES).filter(([, s]) => s.country !== "CA").map(([code, s]) => <option key={code} value={code}>{s.name}</option>)}
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="tracking-start">Employment / tracking starts</label>
+              <input id="tracking-start" className={styles.input} type="date" value={settings.trackingStart} onChange={e => e.target.value && updateSettings({ trackingStart: e.target.value })} />
+              <span className={styles.hint}>Use employment start, not first trip. Earlier work must be recorded for annual thresholds.</span>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="federal-return">Required to file a federal return?</label>
+              <select id="federal-return" className={styles.input} value={settings.federalReturnRequired} onChange={e => updateSettings({ federalReturnRequired: e.target.value as "yes" | "no" | "unknown" })}>
+                <option value="unknown">Not confirmed</option><option value="yes">Yes</option><option value="no">No</option>
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label} htmlFor="ny-days">Employer-expected NY workdays in 2026</label>
+              <input id="ny-days" className={styles.input} type="number" min="0" max="366" value={settings.nyExpectedDays ?? ""} placeholder="Not confirmed" onChange={e => updateSettings({ nyExpectedDays: e.target.value === "" ? undefined : Math.max(0, Number(e.target.value)) })} />
+            </div>
+            <label className={styles.hint}><input type="checkbox" checked={settings.ilMobileWorkerConfirmed} onChange={e => updateSettings({ ilMobileWorkerConfirmed: e.target.checked })} /> Employer confirmed Illinois mobile-worker eligibility (nonlocalized compensation and nonincidental services).</label>
+            <label className={styles.hint}><input type="checkbox" checked={settings.regularWagesOnly} onChange={e => updateSettings({ regularWagesOnly: e.target.checked })} /> Regular W-2 wages only; no special compensation or occupational exceptions.</label>
 
             <div className={styles.field}>
               <span className={styles.label}>Future route starts</span>
@@ -95,6 +112,7 @@ export function SettingsMenu() {
                 <input
                   className={styles.input}
                   type="date"
+                  aria-label="Future route starts"
                   value={settings.routeStart}
                   onChange={(e) => e.target.value && updateSettings({ routeStart: e.target.value })}
                 />
@@ -117,7 +135,7 @@ export function SettingsMenu() {
             </div>
 
             <div className={styles.footer}>
-              Salary prices the fictional wage thresholds. This demo is not legal or tax advice.
+              Salary is used only for forecast estimates. Payroll reports use entered gross wages. Changes here do not update payroll.
             </div>
           </Popover.Popup>
         </Popover.Positioner>

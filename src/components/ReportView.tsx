@@ -1,188 +1,89 @@
 "use client";
-
-import { fmtMoney, fmtRange, fmtShort } from "@/lib/engine";
+import { useMemo, useState } from "react";
 import { useApp } from "@/lib/store";
 import { useDerived } from "@/lib/derived";
-import { STATES } from "@/lib/states";
-import type { RiskLevel } from "@/lib/types";
-import styles from "./report.module.css";
+import { allocatePayPeriod, validatePeriod, type PayPeriod } from "@/lib/reporting/payroll";
+import { allocationCSV } from "@/lib/reporting/export";
+import { coverageIssues } from "@/lib/ledger/model";
+import { fmtMoney } from "@/lib/dates";
+import { RuleDetails } from "./RuleDetails";
+import styles from "./workbench.module.css";
 
-const SOLID: Record<RiskLevel, string> = {
-  clear: "var(--clear)",
-  caution: "var(--caution)",
-  triggered: "var(--triggered)",
-};
-
-export function ReportView() {
-  const { today, settings } = useApp();
-  const { past, outcomes, rate } = useDerived();
-
-  const totalWd = past.reduce((n, a) => n + a.workDays, 0);
-  const withholding = past.filter((a) => outcomes.get(a.state)!.coHit);
-  const filings = past.filter((a) => outcomes.get(a.state)!.youHit);
-  const netNew = withholding.filter(
-    (a) => !STATES[a.state].employerRegistered && STATES[a.state].country !== "CA"
-  );
-
-  // Chronological stop list (each attributed stay segment).
-  const stops = past
-    .flatMap((agg) => agg.stays.map((sa) => ({ agg, sa })))
-    .sort((a, b) => a.sa.from.localeCompare(b.sa.from));
-
-  const issueLine = (state: string): string => {
-    const info = STATES[state];
-    const o = outcomes.get(state)!;
-    if (o.coHit && !info.employerRegistered)
-      return "Demo: crosses the withholding trigger in an unregistered state — new employer registration.";
-    if (o.coHit && o.youHit)
-      return `Demo withholding triggered (${info.withholdingText}) + a sample NR return; employer already registered.`;
-    if (o.coHit) return `Demo withholding triggered (${info.withholdingText}) — employer already registered.`;
-    if (o.youHit) return `Sample NR return triggered; employer side clear (${info.withholdingText}).`;
-    if (!info.filing && !info.withholding) return "No demo trigger.";
-    return `Below demo thresholds (filing ${info.filingText} · withholding ${info.withholdingText}).`;
-  };
-
-  const estFor = (state: string, wages: number) =>
-    wages * (STATES[state].estRate ?? 0.05);
-
-  const totalWages = filings.reduce((n, a) => n + a.workDays * rate, 0);
-  const totalEst = filings.reduce((n, a) => n + estFor(a.state, a.workDays * rate), 0);
-
-  return (
-    <main className={styles.wrap}>
-      <div className={styles.doc} id="report">
-        <div>
-          <h1 className={styles.title}>Compliance report — 2026</h1>
-          <p className={styles.sub}>
-            {fmtShort(past[0]?.firstDay ?? today)} – {fmtShort(today)} · prepared {fmtShort(today)} · fictional demo thresholds · salary{" "}
-            {fmtMoney(settings.salary)} ≈ {fmtMoney(rate)}/work day
-          </p>
-          <div className={styles.statRow}>
-            <Stat value={String(past.length)} label="states visited" />
-            <Stat value={String(totalWd)} label="work days logged" />
-            <Stat
-              value={String(withholding.length)}
-              label="withholding triggered"
-              color="var(--triggered-deep)"
-            />
-            <Stat
-              value={String(filings.length)}
-              label="nonresident returns"
-              color="var(--caution-deep)"
-            />
-            <Stat value={String(netNew.length)} label="net-new registration" />
-          </div>
-        </div>
-
-        <div>
-          <span className={styles.sectionLabel}>Stops · issues &amp; limitations</span>
-          {stops.map(({ agg, sa }) => (
-            <div key={sa.stay.id} className={styles.stopRow}>
-              <span
-                className={styles.stopDot}
-                style={{ background: SOLID[outcomes.get(agg.state)!.level] }}
-              />
-              <span className={styles.stopName}>
-                {STATES[agg.state].name} <span className={styles.stopCity}>{sa.stay.location}</span>
-              </span>
-              <span className={styles.stopDates}>
-                {sa.to >= today ? `${fmtShort(sa.from)} – now` : fmtRange(sa.from, sa.to)}
-              </span>
-              <span className={styles.stopWd}>{sa.workDays} wd</span>
-              <span className={styles.stopIssue}>{issueLine(agg.state)}</span>
-            </div>
-          ))}
-          <p className={styles.limits}>
-            Limitations: work days = weekdays attributed to one state per day (air trips override
-            the ground stay); PTO not subtracted · wages priced at {fmtMoney(rate)}/wd from your
-            salary · all thresholds, registration statuses, and estimates are illustrative.
-          </p>
-        </div>
-
-        <div>
-          <span className={styles.sectionLabel}>Your obligations — what you file</span>
-          <div className={styles.thead}>
-            <span className={styles.cState}>State</span>
-            <span className={styles.cNum}>Work days</span>
-            <span className={styles.cNum}>Wages</span>
-            <span className={styles.cWide} style={{ paddingLeft: 16 }}>
-              Return
-            </span>
-            <span className={styles.cRight}>Est. liability</span>
-          </div>
-          {filings.map((a) => {
-            const wages = a.workDays * rate;
-            return (
-              <div key={a.state} className={styles.trow}>
-                <span className={styles.cState}>{STATES[a.state].name}</span>
-                <span className={styles.cNum}>{a.workDays}</span>
-                <span className={styles.cNum}>{fmtMoney(wages)}</span>
-                <span className={styles.cWide} style={{ paddingLeft: 16 }}>
-                  {STATES[a.state].nrForm ?? `${a.state} sample nonresident return`}
-                </span>
-                <span className={styles.cRight}>≈ {fmtMoney(estFor(a.state, wages))}</span>
-              </div>
-            );
-          })}
-          <div className={styles.trowTotal}>
-            <span className={styles.cState}>Total</span>
-            <span className={styles.cNum}>{filings.reduce((n, a) => n + a.workDays, 0)}</span>
-            <span className={styles.cNum}>{fmtMoney(totalWages)}</span>
-            <span className={styles.cWide} style={{ paddingLeft: 16 }}>
-              {filings.length} returns
-            </span>
-            <span className={styles.cRight}>≈ {fmtMoney(totalEst)}</span>
-          </div>
-          <p className={styles.limits}>
-            Demo estimates use a fictional flat rate and are not legal, payroll, or tax guidance.
-          </p>
-        </div>
-
-        <div>
-          <span className={styles.sectionLabel}>Employer implications — sample obligations</span>
-          <div className={styles.thead}>
-            <span className={styles.cState}>State</span>
-            <span className={styles.cWide}>Trigger crossed</span>
-            <span className={styles.cWide}>Registration status</span>
-            <span className={styles.cFlex}>Action on their side</span>
-          </div>
-          {withholding.map((a) => {
-            const info = STATES[a.state];
-            const netNewRow = !info.employerRegistered && info.country !== "CA";
-            return (
-              <div key={a.state} className={styles.trow}>
-                <span className={`${styles.cState} ${netNewRow ? styles.danger : ""}`}>
-                  {info.name}
-                </span>
-                <span className={styles.cWide} style={{ fontFamily: "var(--font-geist-mono)", fontSize: 12 }}>
-                  {info.withholdingText}
-                </span>
-                <span className={`${styles.cWide} ${netNewRow ? styles.danger : ""}`}>
-                  {netNewRow
-                    ? "Demo: not registered"
-                    : "Demo: registered"}
-                </span>
-                <span className={styles.cFlex}>
-                  {netNewRow
-                    ? "Sample registration + recurring filings"
-                    : "Sample payroll correction in existing account"}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </main>
-  );
+function download(name: string, text: string, type: string) {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-function Stat({ value, label, color }: { value: string; label: string; color?: string }) {
-  return (
-    <div className={styles.stat}>
-      <span className={styles.statValue} style={color ? { color } : undefined}>
-        {value}
-      </span>
-      <span className={styles.statLabel}>{label}</span>
+export function ReportView() {
+  const { today, settings, payPeriods, savePeriod, periodRevisions, ledger, payrollActive, storageError } = useApp();
+  const { days, outcomes, workedStates } = useDerived();
+  const [start, setStart] = useState(`${today.slice(0, 7)}-01`);
+  const [end, setEnd] = useState(today);
+  const [gross, setGross] = useState("");
+  const [selected, setSelected] = useState(payPeriods.at(-1)?.id ?? "");
+  const [error, setError] = useState("");
+  const period = payPeriods.find(p => p.id === selected);
+  const report = useMemo(() => period ? allocatePayPeriod(days, period) : undefined, [days, period]);
+  const [generatedAt] = useState(() => new Date().toISOString());
+  const year = today.slice(0, 4);
+  const startYear = settings.trackingStart > `${year}-01-01` ? settings.trackingStart : `${year}-01-01`;
+  const coverage = coverageIssues(days, startYear, today);
+  const stateResults = [...outcomes.values()].filter(o => o.workDays || o.projectedDays || o.code === settings.assignedWorkState);
+  const snapshot = () => ({ generatedAt: new Date().toISOString(), employee: "Alex Morgan (fictional demo)", settings, dataThrough: today,
+    ruleVersions: [...new Set(stateResults.map(o => o.rule?.version).filter(Boolean))],
+    report, annualOutcomes: stateResults, ledger, days, payPeriods, periodRevisions, payrollActive,
+    scope: "Nonresident regular W-2 wages; state income-tax exposure and withholding; no payroll submission", coverageIssues: coverage });
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: PayPeriod = { id: `period-${start}-${end}`, start, end, grossWages: gross.trim() ? Number(gross) : undefined, source: "employee_entered" };
+    const issues = validatePeriod(next);
+    if (end > today) issues.push("Enter a completed pay period, not future wages.");
+    if (payPeriods.some(p => p.id !== next.id && p.start <= end && p.end >= start)) issues.push("This period overlaps a saved period. Use the original dates to correct its gross wages.");
+    if (issues.length) { setError(issues.join(" ")); return; }
+    savePeriod(next); setSelected(next.id); setError("");
+  };
+  return <main className={styles.wrap} id="report">
+    <div className={styles.card}><h1 className={styles.title}>Mobile employee payroll report</h1>
+      <p className={styles.subtitle}>Alex Morgan · {settings.residence} domicile · {settings.assignedWorkState} assigned work state<br />{year} through {today} · generated {generatedAt}</p>
+      <div className={styles.metrics}><span className={styles.metric}><strong>{workedStates.size}</strong>states with reported work</span><span className={styles.metric}><strong>{stateResults.filter(o => o.withholding.value === true).length}</strong>withholding treatments identified</span><span className={styles.metric}><strong>{ledger.revisions.length}</strong>ledger revisions</span></div>
+      <p className={styles.small}>Includes recorded and unconfirmed activity, identified separately. Employee-entered gross wages are not payroll-provider verified. State income tax is the scope; local tax, resident returns, corporate nexus, unemployment, insurance and international employment are not calculated.</p>
+      <div className={`${styles.row} no-print`}><button className={styles.button} onClick={() => download(`state-lines-${today}.json`, JSON.stringify(snapshot(), null, 2), "application/json")}>Export audit JSON</button><button className={styles.secondary} onClick={() => window.print()}>Print / save PDF</button></div>
+      {storageError && <p role="alert" className={styles.notice}>{storageError}</p>}
     </div>
-  );
+    <form className={`${styles.card} no-print`} onSubmit={save}>
+      <h2 className={styles.heading}>Pay-period gross wages</h2>
+      <p className={styles.small}>Regular salary only. Use actual gross wages from the pay statement. The same dates replace a saved amount; overlapping periods are rejected.</p>
+      <div className={styles.row}><label className={styles.field}>Pay period starts<input className={styles.input} required type="date" value={start} max={today} onChange={e => setStart(e.target.value)} /></label>
+        <label className={styles.field}>Pay period ends<input className={styles.input} required type="date" value={end} max={today} onChange={e => setEnd(e.target.value)} /></label>
+        <label className={styles.field}>Gross regular wages ($)<input className={styles.input} required type="number" min="0" step="0.01" value={gross} onChange={e => setGross(e.target.value)} /></label>
+        <button className={styles.button} disabled={!!storageError}>Save pay period</button></div>
+      {error && <p className={styles.notice} role="alert">{error}</p>}
+      {payPeriods.length > 0 && <label className={styles.field}>Saved pay period<select className={styles.input} value={selected} onChange={e => { setSelected(e.target.value); const p = payPeriods.find(p => p.id === e.target.value); if (p) { setStart(p.start); setEnd(p.end); setGross(String(p.grossWages ?? "")); } }}><option value="">Select period</option>{payPeriods.map(p => <option key={p.id} value={p.id}>{p.start} – {p.end}</option>)}</select></label>}
+    </form>
+    {report && <div className={styles.card}>
+      <h2 className={styles.heading}>Work-location allocation · {report.period.start} – {report.period.end}</h2>
+      <p className={styles.small}>Gross regular wages {fmtMoney(report.period.grossWages ?? 0)} · employee entered. This is allocation data for payroll review, not the tax amount withheld.</p>
+      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>State</th><th>Workdays</th><th>Hours</th><th>Allocation fraction</th><th>Wages ($)</th></tr></thead>
+        <tbody>{report.rows.map(r => <tr key={r.state}><td>{r.state}</td><td>{r.workdays}</td><td>{r.hours}</td><td>{r.numerator} / {r.denominator}</td><td>{r.wages?.toFixed(2) ?? "Pending review"}</td></tr>)}</tbody>
+        <tfoot><tr><th>Total</th><td>{report.totalWorkdays} distinct days</td><td>{report.totalHours}</td><td>{report.reconciled ? "100% reconciled" : "Unresolved"}</td><td>{report.allocatedWages?.toFixed(2) ?? "—"}</td></tr></tfoot>
+      </table></div>
+      {report.issues.length ? <div className={styles.notice}><b>Review required</b><ul className={styles.list}>{report.issues.map(issue => <li key={issue}>{issue}</li>)}</ul></div> : <p className={styles.success}>Work-location allocation reconciles to gross wages. Review the state outcomes below before processing payroll.</p>}
+      {report.rows.map(row => <p key={row.state} className={styles.small}>{row.state}: {row.method} · {row.ruleVersion ?? "No reviewed rule"}</p>)}
+      <button className={`${styles.secondary} no-print`} onClick={() => download(`allocation-${report.period.start}.csv`, allocationCSV(report), "text/csv")}>Export allocation CSV</button>
+    </div>}
+    {periodRevisions.length > 0 && <details className={styles.card}><summary className={styles.heading}>Pay-period correction history</summary>
+      {periodRevisions.map((r, i) => <p className={styles.small} key={`${r.changedAt}-${i}`}>{r.changedAt} · {r.after.start}–{r.after.end} · {r.before ? fmtMoney(r.before.grossWages ?? 0) : "New period"} → {fmtMoney(r.after.grossWages ?? 0)}</p>)}
+    </details>}
+    <div className={styles.card}><h2 className={styles.heading}>Annual activity and obligations</h2>
+      {coverage.length > 0 && <div className={styles.notice}>Incomplete year-to-date data<ul className={styles.list}>{coverage.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
+      <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>State</th><th>Reported wd / hours</th><th>Projected wd</th><th>Filing exposure</th><th>Withholding</th><th>Policy / status</th></tr></thead>
+        <tbody>{stateResults.map(o => <tr key={o.code}><td>{o.code}</td><td>{o.workDays} / {o.hours}</td><td>{o.projectedDays}</td><td>{o.filing.value === true ? "Potential return" : o.filing.value === false ? "Not identified" : "Review"}</td><td>{o.withholding.value === true ? "Treatment applies" : o.withholding.value === false ? "Not triggered" : "Review"}</td><td>{o.label}</td></tr>)}</tbody>
+      </table></div>
+    </div>
+    {stateResults.map(o => <section key={o.code} className={styles.card}><h2 className={styles.heading}>{o.code} · {o.label}</h2>
+      <p className={styles.small}><b>Employee:</b> {o.employeeAction}</p><p className={styles.small}><b>Payroll:</b> {o.payrollAction}</p>
+      <RuleDetails outcome={o} expanded />
+    </section>)}
+    <p className={styles.small}>State Lines provides workflow information and recordkeeping tools, not legal or tax advice. Primary review covers the linked assertions; unresolved conditions remain visible. No final tax liability is calculated.</p>
+  </main>;
 }

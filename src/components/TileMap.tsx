@@ -3,6 +3,7 @@
 import { useApp } from "@/lib/store";
 import { useDerived } from "@/lib/derived";
 import { GRID_ROWS, STATES } from "@/lib/states";
+import { getEmployerPolicyStatus } from "@/lib/employer/demoEmployer";
 import type { RiskLevel } from "@/lib/types";
 import styles from "./map.module.css";
 
@@ -135,7 +136,7 @@ export function TileMap() {
             <div className={styles.tileBottomRow}>
               <span />
               <span className={styles.tileCount} style={{ color: DEEP[level] }}>
-                {agg.workDays}
+                {agg.workDays || (agg.projectedDays ? "?" : 0)}
               </span>
             </div>
           </button>
@@ -202,7 +203,8 @@ export function TileMap() {
       <button
         className={`${styles.tile} ${styles.tileCentered}${sel}`}
         onClick={onClick}
-        aria-label={info.name}
+        aria-label={`${info.name}, ${getEmployerPolicyStatus(code) === "allowed" ? "work permitted" : "work not permitted"}`}
+        style={{ opacity: getEmployerPolicyStatus(code) === "allowed" ? 1 : 0.55 }}
       >
         <span
           className={styles.abbr}
@@ -215,18 +217,11 @@ export function TileMap() {
   }
 
   function Legend() {
-    const items =
-      mode === "past"
-        ? ([
-            ["clear", "No obligation"],
-            ["caution", "Your NR return"],
-            ["triggered", "Withholding triggered"],
-          ] as const)
-        : ([
-            ["clear", "Clear"],
-            ["caution", "Filing / withholding"],
-            ["triggered", "New registration"],
-          ] as const);
+    const items = [
+      ["clear", "No modeled state tax action"],
+      ["caution", "Review / active / approaching"],
+      ["triggered", "Not permitted / payroll action"],
+    ] as const;
     return (
       <div className={styles.legend}>
         {items.map(([level, label]) => (

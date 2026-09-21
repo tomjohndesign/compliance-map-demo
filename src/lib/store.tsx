@@ -13,6 +13,11 @@ import { DEFAULT_SETTINGS, seedForDate } from "./seed";
 import { todayISO } from "./engine";
 import type { Mode, PlannedStop, Settings, Stay, ThemePref } from "./types";
 
+import { EMPTY_LEDGER, reviseDay, type LedgerState, type WorkDay } from "./ledger/model";
+import { readSavedWork, type PeriodRevision } from "./persistence";
+import type { PayPeriod } from "./reporting/payroll";
+
+const WORK_KEY = "sl-work-ledger-v1";
 const PLANNED_KEY = "sl-planned-itinerary-2026-09-21";
 const SETTINGS_KEY = "sl-settings-itinerary-2026-09-21";
 const THEME_KEY = "sl-theme";
@@ -24,12 +29,20 @@ interface AppState {
   settings: Settings;
   mode: Mode;
   selected: string | null;
-  pastView: "map" | "report";
+  pastView: "map" | "report" | "ledger";
+  ledger: LedgerState;
+  payPeriods: PayPeriod[];
+  periodRevisions: PeriodRevision[];
+  payrollActive: string[];
+  storageError: string | null;
+  saveDay: (day: WorkDay, reason: string, previous?: WorkDay) => void;
+  savePeriod: (period: PayPeriod) => void;
+  setPayrollActive: (key: string, active: boolean) => void;
   addHint: boolean;
 
   setMode: (m: Mode) => void;
   select: (code: string | null) => void;
-  setPastView: (v: "map" | "report") => void;
+  setPastView: (v: "map" | "report" | "ledger") => void;
   setAddHint: (v: boolean) => void;
   addStop: (stop: Omit<PlannedStop, "id">) => void;
   updateStop: (id: string, patch: Partial<PlannedStop>) => void;
@@ -55,15 +68,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS, routeStart: seed.routeStart });
   const [mode, setModeState] = useState<Mode>("past");
   const [selected, setSelected] = useState<string | null>(null);
-  const [pastView, setPastView] = useState<"map" | "report">("map");
+  const [pastView, setPastView] = useState<"map" | "report" | "ledger">("map");
   const [addHint, setAddHint] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  const [ledger, setLedger] = useState<LedgerState>(EMPTY_LEDGER);
+  const [payPeriods, setPayPeriods] = useState<PayPeriod[]>([]);
+  const [periodRevisions, setPeriodRevisions] = useState<PeriodRevision[]>([]);
+  const [payrollActive, setActive] = useState<string[]>([]);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   // Load persisted state after mount — localStorage is client-only, so this
   // must happen post-hydration (the server render uses defaults).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
+      const work = localStorage.getItem(WORK_KEY);
+      if (work) {
+        const parsed = readSavedWork(work);
+        setPeriodRevisions(parsed.periodRevisions);
+        setLedger(parsed.ledger);
+        setPayPeriods(parsed.payPeriods);
+        setActive(parsed.payrollActive);
+      }
       const p = localStorage.getItem(PLANNED_KEY);
       if (p) setPlanned(JSON.parse(p));
       const s = localStorage.getItem(SETTINGS_KEY);
@@ -77,24 +104,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const theme = (localStorage.getItem(THEME_KEY) as ThemePref) || "system";
       setSettings((prev) => ({ ...prev, ...preferences, theme }));
     } catch {
-      // ignore corrupted storage
+      setStorageError("Saved data could not be loaded. Export or recover browser storage before saving new records.");
     }
     setHydrated(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(PLANNED_KEY, JSON.stringify(planned));
-  }, [planned, hydrated]);
+    if (!hydrated || storageError) return;
+    try { localStorage.setItem(WORK_KEY, JSON.stringify({ ledger, payPeriods, payrollActive, periodRevisions })); }
+    // Storage failures must be surfaced to the user instead of silently dropping work.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    catch { setStorageError("Browser storage is full or unavailable. Export your report before closing this tab."); }
+  }, [ledger, payPeriods, payrollActive, periodRevisions, hydrated, storageError]);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || storageError) return;
+    try { localStorage.setItem(PLANNED_KEY, JSON.stringify(planned)); }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    catch { setStorageError("Route changes could not be saved to browser storage."); }
+  }, [planned, hydrated, storageError]);
+
+  useEffect(() => {
+    if (!hydrated || storageError) return;
     const { theme, ...rest } = settings;
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
-    localStorage.setItem(THEME_KEY, theme);
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
+      localStorage.setItem(THEME_KEY, theme);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    } catch { setStorageError("Settings could not be saved to browser storage."); }
     applyTheme(theme);
-  }, [settings, hydrated]);
+  }, [settings, hydrated, storageError]);
 
   // Follow OS appearance changes while in system mode.
   useEffect(() => {
@@ -115,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const select = useCallback((code: string | null) => {
     setSelected(code);
+    if (code) setPastView("map");
     setAddHint(false);
   }, []);
 
@@ -145,9 +186,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  const saveDay = useCallback((day: WorkDay, reason: string, previous?: WorkDay) => {
+    const now = new Date().toISOString();
+    setLedger(current => reviseDay(current, day, reason, now, previous));
+  }, []);
+  const savePeriod = useCallback((period: PayPeriod) => {
+    const before = payPeriods.find(p => p.id === period.id);
+    setPeriodRevisions(current => [...current, { before, after: period, changedAt: new Date().toISOString() }]);
+    setPayPeriods(current => [...current.filter(p => p.id !== period.id), period].sort((a, b) => a.start.localeCompare(b.start)));
+  }, [payPeriods]);
+  const setPayrollActive = useCallback((key: string, active: boolean) => {
+    setActive(current => active ? [...new Set([...current, key])] : current.filter(k => k !== key));
+  }, []);
+
   const value = useMemo<AppState>(
     () => ({
       today,
+      ledger, payPeriods, periodRevisions, payrollActive, storageError, saveDay, savePeriod, setPayrollActive,
       stays,
       planned,
       settings,
@@ -165,7 +220,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       moveStop,
       updateSettings,
     }),
-    [today, stays, planned, settings, mode, selected, pastView, addHint, setMode, select, addStop, updateStop, removeStop, moveStop, updateSettings]
+    [today, ledger, payPeriods, periodRevisions, payrollActive, storageError, saveDay, savePeriod, setPayrollActive, stays, planned, settings, mode, selected, pastView, addHint, setMode, select, addStop, updateStop, removeStop, moveStop, updateSettings]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

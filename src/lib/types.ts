@@ -29,42 +29,24 @@ export type ThemePref = "system" | "light" | "dark";
 
 export interface Settings {
   salary: number;
-  /** fraction of each illustrative threshold treated as the personal ceiling */
+  /** fraction of each legal day threshold treated as the personal ceiling */
   margin: number;
-  residence: "PA" | "FL";
+  residence: string;
+  assignedWorkState: string;
+  trackingStart: string;
+  federalReturnRequired: "unknown" | "yes" | "no";
+  nyExpectedDays?: number;
+  ilMobileWorkerConfirmed: boolean;
+  regularWagesOnly: boolean;
   /** ISO date the future route chains from */
   routeStart: string;
   theme: ThemePref;
 }
 
-/** Illustrative threshold rule used by the demo data:
- *  d = day count (d: 1 means "from day 1"), usd = wage amount,
- *  and/any = compound rules. Null = no demo trigger. */
-export interface Rule {
-  d?: number;
-  usd?: number;
-  and?: { d: number; usd: number };
-  any?: { d: number; usd: number };
-}
-
+/** Map geography only; tax rules and employer policy are separate. */
 export interface StateInfo {
   name: string;
-  /** geofacet us_state_grid1 position (row 1-7, col 1-11); Canada on row 0 */
   row: number;
   col: number;
-  /** personal nonresident filing trigger */
-  filing: Rule | null;
-  /** employer withholding trigger */
-  withholding: Rule | null;
-  /** display strings for the illustrative demo rules */
-  filingText: string;
-  withholdingText: string;
-  /** fictional employer registration status used only for the demo */
-  employerRegistered: boolean;
-  flag?: string;
-  /** nonresident return name, when known */
-  nrForm?: string;
-  /** rough effective NR rate used for liability estimates */
-  estRate?: number;
   country?: "US" | "CA";
 }
