@@ -6,16 +6,15 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { DEFAULT_SETTINGS, SEED_STAYS } from "./seed";
+import { DEFAULT_SETTINGS, seedForDate } from "./seed";
 import { todayISO } from "./engine";
 import type { Mode, PlannedStop, Settings, Stay, ThemePref } from "./types";
 
-const PLANNED_KEY = "sl-planned";
-const SETTINGS_KEY = "sl-settings";
+const PLANNED_KEY = "sl-planned-itinerary-2026-09-21";
+const SETTINGS_KEY = "sl-settings-itinerary-2026-09-21";
 const THEME_KEY = "sl-theme";
 
 interface AppState {
@@ -50,14 +49,15 @@ function applyTheme(theme: ThemePref) {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [today] = useState(todayISO);
-  const [stays] = useState<Stay[]>(SEED_STAYS);
-  const [planned, setPlanned] = useState<PlannedStop[]>([]);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [seed] = useState(() => seedForDate(today));
+  const [stays] = useState<Stay[]>(seed.stays);
+  const [planned, setPlanned] = useState<PlannedStop[]>(seed.planned);
+  const [settings, setSettings] = useState<Settings>({ ...DEFAULT_SETTINGS, routeStart: seed.routeStart });
   const [mode, setModeState] = useState<Mode>("past");
   const [selected, setSelected] = useState<string | null>(null);
   const [pastView, setPastView] = useState<"map" | "report">("map");
   const [addHint, setAddHint] = useState(false);
-  const hydrated = useRef(false);
+  const [hydrated, setHydrated] = useState(false);
 
   // Load persisted state after mount — localStorage is client-only, so this
   // must happen post-hydration (the server render uses defaults).
@@ -67,27 +67,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const p = localStorage.getItem(PLANNED_KEY);
       if (p) setPlanned(JSON.parse(p));
       const s = localStorage.getItem(SETTINGS_KEY);
+      // Retain existing preferences, but replace the old sample route's start date.
+      const legacy = JSON.parse(localStorage.getItem("sl-settings") || "{}");
+      const preferences = s ? JSON.parse(s) : {
+        salary: legacy.salary ?? DEFAULT_SETTINGS.salary,
+        margin: legacy.margin ?? DEFAULT_SETTINGS.margin,
+        residence: legacy.residence ?? DEFAULT_SETTINGS.residence,
+      };
       const theme = (localStorage.getItem(THEME_KEY) as ThemePref) || "system";
-      setSettings((prev) => ({ ...prev, ...(s ? JSON.parse(s) : null), theme }));
+      setSettings((prev) => ({ ...prev, ...preferences, theme }));
     } catch {
       // ignore corrupted storage
     }
-    hydrated.current = true;
+    setHydrated(true);
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated) return;
     localStorage.setItem(PLANNED_KEY, JSON.stringify(planned));
-  }, [planned]);
+  }, [planned, hydrated]);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!hydrated) return;
     const { theme, ...rest } = settings;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
     localStorage.setItem(THEME_KEY, theme);
     applyTheme(theme);
-  }, [settings]);
+  }, [settings, hydrated]);
 
   // Follow OS appearance changes while in system mode.
   useEffect(() => {

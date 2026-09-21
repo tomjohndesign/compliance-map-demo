@@ -32,7 +32,7 @@ export function SidebarLeft() {
           {pastView === "report" ? "Back to map" : "Create report"}
         </button>
         <span className={styles.footerNote}>
-          Jan 1 – {fmtShort(today)} ·{" "}
+          {fmtShort(past[0]?.firstDay ?? today)} – {fmtShort(today)} ·{" "}
           {[...outcomes.values()].filter((o) => o.coHit).length} states triggered withholding
         </span>
       </>
@@ -44,7 +44,7 @@ export function SidebarLeft() {
         <span className={styles.footerNote}>
           {scheduled.length === 0
             ? "No stays planned yet"
-            : `Route ends ${fmtShort(scheduled[scheduled.length - 1].endISO)} · ${
+            : `Route ends ${fmtShort(scheduled[scheduled.length - 1].endISO, true)} · ${
                 new Set(scheduled.map((s) => s.stop.state)).size
               } states · ${routeAlerts} alert${routeAlerts === 1 ? "" : "s"}`}
         </span>
@@ -175,7 +175,7 @@ function FutureList() {
                 <span className={styles.stayName}>
                   {s.stop.location || `Stop ${s.index + 1}`}
                 </span>
-                <span className={styles.stayDates}>{fmtRange(s.startISO, s.endISO)}</span>
+                <span className={styles.stayDates}>{fmtRange(s.startISO, s.endISO, true)}</span>
               </div>
             ))}
           </div>
