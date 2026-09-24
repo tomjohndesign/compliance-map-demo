@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkspaceSwitcher } from "./WorkspaceSwitcher";
 import { Tabs } from "@base-ui/react/tabs";
 import { fmtRange, fmtShort } from "@/lib/engine";
 import { useApp } from "@/lib/store";
@@ -68,6 +69,7 @@ export function SidebarLeft() {
       </div>
 
       <div className={styles.segmentWrap}>
+        <WorkspaceSwitcher active="employee" />
         <Tabs.Root value={mode} onValueChange={(v) => setMode(v as Mode)}>
           <Tabs.List className={styles.tabsList}>
             <Tabs.Indicator className={styles.tabIndicator} />

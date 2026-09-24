@@ -4,7 +4,7 @@ import { fmtMoney, fmtRange } from "@/lib/dates";
 import { useApp } from "@/lib/store";
 import { useDerived } from "@/lib/derived";
 import { STATES } from "@/lib/states";
-import { getEmployerPolicyStatus, HYPOTHETICAL_EMPLOYER } from "@/lib/employer/demoEmployer";
+import { getEmployerPolicyStatus } from "@/lib/employer/demoEmployer";
 import { forecastRoute } from "@/lib/compliance/forecast";
 import type { StateOutcome } from "@/lib/compliance/evaluate";
 import { RuleDetails } from "./RuleDetails";
@@ -12,13 +12,13 @@ import styles from "./panel.module.css";
 import w from "./workbench.module.css";
 
 export function SidebarRight() {
-  const { selected, mode, pastView, setPastView, select, storageError } = useApp();
+  const { selected, mode, pastView, setPastView, select, storageError, employer } = useApp();
   const { scheduled, routeAlerts } = useDerived();
   return <aside className={`${styles.panel} no-print`}>
     {storageError && <p role="alert" className={w.notice}>{storageError}</p>}
     {selected && pastView === "map" ? <StatePanel key={`${mode}-${selected}`} code={selected} /> : <>
       <h2 className={styles.panelTitle}>{pastView === "report" ? "Payroll report" : pastView === "ledger" ? "Work records" : mode === "future" ? "Plan your route" : "Your work year"}</h2>
-      <p className={styles.meta}>{HYPOTHETICAL_EMPLOYER.name} permits work in 13 states. Travel can include other locations, but work there is prohibited.</p>
+      <p className={styles.meta}>{employer.name} permits work in {Object.values(employer.supportedStates).filter(s => s === "allowed").length} states. Travel can include other locations, but work there is prohibited.</p>
       {mode === "future" ? <><p>{scheduled.length} planned stays · {routeAlerts} reviews / actions</p><p className={styles.meta}>Select a state to edit a stay. Dates chain automatically. Projections use weekdays and estimated salary; actual work replaces projections.</p></> : <>
         <p className={styles.meta}>Start by confirming the work ledger. The supplied travel itinerary is projected activity until you report or attest it.</p>
         <button className={styles.primaryBtn} onClick={() => { setPastView("ledger"); select(null); }}>Review work ledger</button>
@@ -43,23 +43,23 @@ function OutcomeSummary({ outcome }: { outcome: StateOutcome }) {
   </div>;
 }
 function StatePanel({ code }: { code: string }) {
-  const { mode, select, today, payrollActive, setPayrollActive } = useApp();
+  const { mode, select, today, payrollActive, setPayrollActive, employer } = useApp();
   const { outcomes } = useDerived();
   const outcome = outcomes.get(code)!;
   return <>
     <div className={styles.headerRow}><h2 className={styles.panelTitle}>{STATES[code].name}</h2><button className={styles.closeBtn} aria-label="Close state details" onClick={() => select(null)}>×</button></div>
-    <p className={styles.meta}>Employer policy: {getEmployerPolicyStatus(code).replaceAll("_", " ")}{STATES[code].country === "CA" ? " · International work requires separate review" : ""}</p>
+    <p className={styles.meta}>Employer policy: {getEmployerPolicyStatus(code, employer).replaceAll("_", " ")}{STATES[code].country === "CA" ? " · International work requires separate review" : ""}</p>
     {mode === "future" ? <FutureEditor code={code} /> : <>
       <p className={styles.meta}>{outcome.workDays} reported workdays · {outcome.hours} hours · {outcome.projectedDays} projected workdays awaiting confirmation</p>
       <p className={styles.meta}>{outcome.wages === undefined ? "Sourced wages pending complete payroll data" : `${fmtMoney(outcome.wages)} provisional wage allocation`}</p>
       <OutcomeSummary outcome={outcome} />
       {outcome.reasons.length > 0 && <details className={w.details}><summary>Data and review needs</summary><ul className={w.list}>{outcome.reasons.map(r => <li key={r}>{r}</li>)}</ul></details>}
-      {outcome.withholding.value === true && getEmployerPolicyStatus(code) === "allowed" && <label className={w.check}><input type="checkbox" checked={payrollActive.includes(`${today.slice(0, 4)}:${code}`)} onChange={e => setPayrollActive(`${today.slice(0, 4)}:${code}`, e.target.checked)} />Payroll has confirmed this year’s state treatment is active (record only; no payroll submission).</label>}
+      {outcome.withholding.value === true && getEmployerPolicyStatus(code, employer) === "allowed" && <label className={w.check}><input type="checkbox" checked={payrollActive.includes(`${today.slice(0, 4)}:${code}`)} onChange={e => setPayrollActive(`${today.slice(0, 4)}:${code}`, e.target.checked)} />Payroll has confirmed this year’s state treatment is active (record only; no payroll submission).</label>}
     </>}
   </>;
 }
 function FutureEditor({ code }: { code: string }) {
-  const { planned, settings, addStop, updateStop, removeStop, moveStop, payrollActive } = useApp();
+  const { planned, settings, addStop, updateStop, removeStop, moveStop, payrollActive, employer } = useApp();
   const { days } = useDerived();
   const choices = planned.filter(p => p.state === code);
   const [stopId, setStopId] = useState(choices.at(-1)?.id ?? "new");
@@ -69,9 +69,9 @@ function FutureEditor({ code }: { code: string }) {
   const preview = useMemo(() => {
     const candidate = { id: stopId, state: code, location, lengthDays: length };
     const route = existing ? planned.map(p => p.id === stopId ? candidate : p) : [...planned, candidate];
-    return forecastRoute(route, days, settings, payrollActive).find(s => s.stop.id === stopId)!;
-  }, [planned, days, settings, payrollActive, stopId, length, location, code, existing]);
-  const permitted = getEmployerPolicyStatus(code) === "allowed";
+    return forecastRoute(route, days, settings, payrollActive, employer).find(s => s.stop.id === stopId)!;
+  }, [planned, days, settings, payrollActive, stopId, length, location, code, existing, employer]);
+  const permitted = getEmployerPolicyStatus(code, employer) === "allowed";
   return <>
     {choices.length > 0 && <label className={w.field}>Stay to edit<select className={w.input} value={stopId} onChange={e => {
       setStopId(e.target.value); const stop = planned.find(p => p.id === e.target.value); setLength(stop?.lengthDays ?? 14); setLocation(stop?.location ?? "");

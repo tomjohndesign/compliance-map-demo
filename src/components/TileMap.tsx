@@ -3,10 +3,11 @@
 import { useId } from "react";
 import { useApp } from "@/lib/store";
 import { useDerived } from "@/lib/derived";
-import { GRID_ROWS, STATES } from "@/lib/states";
+import { STATES } from "@/lib/states";
 import { getEmployerPolicyStatus } from "@/lib/employer/demoEmployer";
 import type { RiskLevel } from "@/lib/types";
 import styles from "./map.module.css";
+import { StateTileGrid } from "./StateTileGrid";
 
 const PITCH = 62; // 56px tile + 6px gap
 const HALF = 28;
@@ -28,7 +29,7 @@ const SOLID: Record<RiskLevel, string> = {
 };
 
 export function TileMap() {
-  const { mode, selected, select } = useApp();
+  const { mode, selected, select, employer } = useApp();
   const { pastByState, pastRoute, outcomes, scheduled, clocks } = useDerived();
   const arrowId = useId();
   const pastOrders = new Map<string, number[]>();
@@ -76,27 +77,7 @@ export function TileMap() {
 
   return (
     <main className={styles.mapArea}>
-      <div className={styles.grid}>
-        {GRID_ROWS.map((row, r) => (
-          <div key={r} className={styles.row}>
-            {row.map((code) => {
-              const info = STATES[code];
-              const leftPad = code === row[0] ? (info.col - 1) * PITCH : 0;
-              // gap between this tile and the previous one in the row
-              const prev = row[row.indexOf(code) - 1];
-              const gapPad = prev ? (info.col - STATES[prev].col - 1) * PITCH : 0;
-              return (
-                <div
-                  key={code}
-                  className={styles.cell}
-                  style={{ marginLeft: (prev ? gapPad : leftPad) || undefined }}
-                >
-                  <Tile code={code} />
-                </div>
-              );
-            })}
-          </div>
-        ))}
+      <StateTileGrid renderTile={code => <Tile code={code} />}>
         {pathStates.length > 1 && (
           <svg
             className={styles.pathSvg}
@@ -146,7 +127,7 @@ export function TileMap() {
             )}
           </svg>
         )}
-      </div>
+      </StateTileGrid>
       <Legend />
     </main>
   );
@@ -204,7 +185,7 @@ export function TileMap() {
             <div className={styles.tileTopRow}>
               <span
                 className={styles.tileAbbrStrong}
-                style={{ color: route.level === "triggered" ? "var(--triggered)" : "var(--navy)" }}
+                style={{ color: route.level === "triggered" ? "var(--triggered-deep)" : "var(--navy)" }}
               >
                 {code}
               </span>
@@ -247,8 +228,8 @@ export function TileMap() {
       <button
         className={`${styles.tile} ${styles.tileCentered}${sel}`}
         onClick={onClick}
-        aria-label={`${info.name}, ${getEmployerPolicyStatus(code) === "allowed" ? "work permitted" : "work not permitted"}`}
-        style={{ opacity: getEmployerPolicyStatus(code) === "allowed" ? 1 : 0.55 }}
+        aria-label={`${info.name}, ${getEmployerPolicyStatus(code, employer) === "allowed" ? "work permitted" : "work not permitted"}`}
+        style={{ opacity: getEmployerPolicyStatus(code, employer) === "allowed" ? 1 : 0.55 }}
       >
         <span
           className={styles.abbr}

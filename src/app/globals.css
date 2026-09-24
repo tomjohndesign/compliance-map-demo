@@ -1,71 +1,138 @@
 @import "tailwindcss";
 
+/* Palette follows the Geist / vercel.com brand scales (vercel.com/design.md).
+   Monochrome-first: neutrals carry the whole UI, hue is reserved for status,
+   focus, and data — and every colored mark is paired with a non-color cue. */
+
 :root {
   color-scheme: light;
 
-  --bg: #f4f5f6;
-  --surface: #ffffff;
-  --rule: #e5e8ea;
-  --tile: #edeff1;
-  --tile-hover: #e2e6e9;
-  --ink: #16202b;
-  --slate: #5c6670;
-  --faint: #8b949d;
+  /* Geist scale — light */
+  --background-100: oklch(1 0 0);
+  --background-200: oklch(0.984 0 0);
+  --gray-100: oklch(0.961 0 0);
+  --gray-200: oklch(0.94 0 0);
+  --gray-300: oklch(0.925 0 0);
+  --gray-400: oklch(0.937 0 0);
+  --gray-500: oklch(0.836 0 0);
+  --gray-600: oklch(0.732 0 0);
+  --gray-700: oklch(0.65 0 0);
+  --gray-800: oklch(0.59 0 0);
+  --gray-900: oklch(0.42 0 0);
+  --gray-1000: oklch(0.205 0 0);
 
-  --navy: #1b3a5c;
-  --navy-contrast: #ffffff;
-  --navy-soft: #e8eef4;
-  --btn-bg: #1b3a5c;
-  --btn-fg: #ffffff;
-  --ring: rgba(27, 58, 92, 0.22);
-  --path: rgba(27, 58, 92, 0.4);
+  --gray-alpha-300: oklch(0 0 0 / 0.1);
+  --gray-alpha-400: oklch(0 0 0 / 0.08);
+  --gray-alpha-700: oklch(0 0 0 / 0.44);
 
-  --clear: #2e7d4f;
-  --caution: #c9860b;
-  --triggered: #b3372e;
-  --clear-soft: #e3f0e8;
-  --caution-soft: #f7eeda;
-  --triggered-soft: #f6e4e2;
-  --clear-deep: #1e5e3c;
-  --caution-deep: #7a5306;
-  --triggered-deep: #8f2b24;
+  --blue-700: oklch(57.61% 0.2508 258.23);
+  --green-100: oklch(97.59% 0.0289 145.42);
+  --green-900: oklch(51.75% 0.1453 147.65);
+  --green-1000: oklch(29.15% 0.1197 147.38);
+  --amber-100: oklch(97.48% 0.0331 85.79);
+  --amber-900: oklch(52.79% 0.1496 54.65);
+  --amber-1000: oklch(30.83% 0.099 45.48);
+  --red-100: oklch(96.5% 0.0223 13.09);
+  --red-700: oklch(62.56% 0.2524 23.03);
+  --red-1000: oklch(24.8% 0.1041 18.86);
 
-  --shadow-seg: 0 1px 2px rgba(22, 32, 43, 0.1);
-  --shadow-pop: 0 8px 24px rgba(22, 32, 43, 0.14);
+  /* Surfaces, text, rules */
+  --bg: var(--background-200);
+  --surface: var(--background-100);
+  --rule: var(--gray-alpha-300);
+  --tile: var(--gray-100);
+  --tile-hover: var(--gray-200);
+  --ink: var(--gray-1000);
+  --slate: var(--gray-900);
+  --faint: var(--gray-800);
+
+  /* Accent is neutral, not a hue — the Geist primary action */
+  --navy: var(--gray-1000);
+  --navy-contrast: oklch(0.946 0 0);
+  --navy-soft: var(--gray-100);
+  --btn-bg: var(--gray-1000);
+  --btn-fg: oklch(0.946 0 0);
+  --ring: oklch(57.61% 0.2508 258.23 / 0.4);
+  --path: var(--gray-alpha-700);
+
+  /* Status: success / warning / error */
+  --clear: var(--green-900);
+  --caution: var(--amber-900);
+  --triggered: var(--red-700);
+  --clear-soft: var(--green-100);
+  --caution-soft: var(--amber-100);
+  --triggered-soft: var(--red-100);
+  --clear-deep: var(--green-1000);
+  --caution-deep: var(--amber-1000);
+  --triggered-deep: var(--red-1000);
+
+  --shadow-seg: 0 1px 2px oklch(0 0 0 / 0.06);
+  --shadow-pop: 0 8px 24px oklch(0 0 0 / 0.1);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #10151c;
-  --surface: #171e27;
-  --rule: #26303b;
-  --tile: #1f2934;
-  --tile-hover: #273240;
-  --ink: #e9edf1;
-  --slate: #9aa6b1;
-  --faint: #66727e;
+  /* Geist scale — dark */
+  --background-100: oklch(0 0 0);
+  --background-200: oklch(0.027 0 0);
+  --gray-100: oklch(0.218 0 0);
+  --gray-200: oklch(0.239 0 0);
+  --gray-300: oklch(0.281 0 0);
+  --gray-400: oklch(0.301 0 0);
+  --gray-500: oklch(0.39 0 0);
+  --gray-600: oklch(0.623 0 0);
+  --gray-700: oklch(0.65 0 0);
+  --gray-800: oklch(0.59 0 0);
+  --gray-900: oklch(0.706 0 0);
+  --gray-1000: oklch(0.946 0 0);
 
-  --navy: #8fb4d9;
-  --navy-contrast: #0f1722;
-  --navy-soft: #1d2c3e;
-  --btn-bg: #2f5e94;
-  --btn-fg: #f2f6fa;
-  --ring: rgba(143, 180, 217, 0.3);
-  --path: rgba(143, 180, 217, 0.45);
+  --gray-alpha-300: oklch(1 0 0 / 0.13);
+  --gray-alpha-400: oklch(1 0 0 / 0.14);
+  --gray-alpha-700: oklch(1 0 0 / 0.54);
 
-  --clear: #4cbf83;
-  --caution: #e3a93e;
-  --triggered: #e26a5f;
-  --clear-soft: #142a1f;
-  --caution-soft: #2c2312;
-  --triggered-soft: #331b18;
-  --clear-deep: #7fd6a8;
-  --caution-deep: #efc069;
-  --triggered-deep: #f09a8f;
+  --blue-900: oklch(71.7% 0.1648 250.794);
+  --green-100: oklch(23.09% 0.0716 149.68);
+  --green-900: oklch(73.1% 0.2158 148.29);
+  --green-1000: oklch(96.76% 0.056 154.18);
+  --amber-100: oklch(22.46% 0.0538 76.04);
+  --amber-900: oklch(77.21% 0.1991 64.28);
+  --amber-1000: oklch(96.7% 0.0418 84.59);
+  --red-100: oklch(22.1% 0.0657 15.11);
+  --red-700: oklch(62.56% 0.2234 23.03);
+  --red-1000: oklch(95.6% 0.0293 6.61);
 
-  --shadow-seg: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
+  /* Near-flat black page with panels a single step above, separated by hairlines */
+  --bg: var(--background-100);
+  --surface: var(--background-200);
+  --rule: var(--gray-alpha-300);
+  --tile: var(--gray-100);
+  --tile-hover: var(--gray-200);
+  --ink: var(--gray-1000);
+  --slate: var(--gray-900);
+  --faint: var(--gray-800);
+
+  /* The primary action inverts in dark mode, as in Geist */
+  --navy: var(--gray-1000);
+  --navy-contrast: oklch(0.205 0 0);
+  --navy-soft: var(--gray-100);
+  --btn-bg: var(--gray-1000);
+  --btn-fg: oklch(0.205 0 0);
+  --ring: oklch(71.7% 0.1648 250.794 / 0.45);
+  --path: var(--gray-alpha-700);
+
+  --clear: var(--green-900);
+  --caution: var(--amber-900);
+  --triggered: var(--red-700);
+  --clear-soft: var(--green-100);
+  --caution-soft: var(--amber-100);
+  --triggered-soft: var(--red-100);
+  --clear-deep: var(--green-1000);
+  --caution-deep: var(--amber-1000);
+  --triggered-deep: var(--red-1000);
+
+  --shadow-seg: 0 1px 2px oklch(0 0 0 / 0.5);
+  --shadow-pop: 0 8px 24px oklch(0 0 0 / 0.65);
 }
 
 html,

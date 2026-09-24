@@ -9,7 +9,7 @@ import { forecastRoute } from "./compliance/forecast";
 import { wagesThrough } from "./reporting/payroll";
 
 export function useDerived() {
-  const { stays, planned, settings, today, ledger, payPeriods, payrollActive } = useApp();
+  const { stays, planned, settings, today, ledger, payPeriods, payrollActive, employer } = useApp();
   return useMemo(() => {
     const days = mergeLedger(projectStays(stays, today), ledger);
     const yearStart = `${today.slice(0, 4)}-01-01`;
@@ -20,7 +20,7 @@ export function useDerived() {
       : undefined;
     const outcomes = new Map(Object.keys(STATES).map(code => {
       const id = STATES[code].country === "CA" ? `CA-${code}` : code;
-      return [code, evaluateState(id, days, settings, today, { stateWages: wagesThrough(days, payPeriods, id, yearStart, today), annualTotalWages, payrollActive: payrollActive.includes(`${today.slice(0, 4)}:${id}`) })];
+      return [code, evaluateState(id, days, settings, today, { employer, stateWages: wagesThrough(days, payPeriods, id, yearStart, today), annualTotalWages, payrollActive: payrollActive.includes(`${today.slice(0, 4)}:${id}`) })];
     }));
     const past = codes.filter(code => STATES[code]).map(state => {
       const matching = current.filter(d => d.sessions.some(s => s.state === state));
@@ -30,9 +30,9 @@ export function useDerived() {
         stays: stays.filter(s => s.state === state && s.start <= today && s.end >= yearStart).map(stay => ({ stay, from: stay.start < yearStart ? yearStart : stay.start, to: stay.end > today ? today : stay.end })),
       };
     }).sort((a, b) => a.firstDay.localeCompare(b.firstDay));
-    const scheduled = forecastRoute(planned, days, settings, payrollActive);
+    const scheduled = forecastRoute(planned, days, settings, payrollActive, employer);
     const routeAlerts = scheduled.filter(s => s.outcome.status !== "clear" && s.outcome.status !== "active").length;
     const workedStates = new Set(current.filter(d => d.status !== "projected").flatMap(d => d.sessions.filter(s => s.activity === "work").map(jurisdiction)));
     return { days, past, pastRoute: pastRouteStates(stays, today), pastByState: new Map(past.map(a => [a.state, a])), outcomes, scheduled, clocks: { run: currentRun(stays, today) }, routeAlerts, workedStates };
-  }, [stays, planned, settings, today, ledger, payPeriods, payrollActive]);
+  }, [stays, planned, settings, today, ledger, payPeriods, payrollActive, employer]);
 }

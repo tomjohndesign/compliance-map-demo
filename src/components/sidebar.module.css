@@ -241,3 +241,23 @@
   color: var(--faint);
   text-align: center;
 }
+
+.workspaceSwitch {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.workspaceSwitch a {
+  flex: 1;
+  padding: 8px 4px;
+  text-align: center;
+  color: var(--slate);
+  font-size: 12px;
+  border-bottom: 2px solid transparent;
+}
+.workspaceSwitch a[aria-current] {
+  color: var(--navy);
+  border-color: var(--navy);
+  font-weight: 600;
+}

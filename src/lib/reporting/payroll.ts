@@ -1,6 +1,6 @@
 import { coverageIssues, datesBetween, dayCount, jurisdiction, validDate, workSessions, type WorkDay } from "../ledger/model.ts";
 import { getReviewedRule } from "../compliance/reviewed2026.ts";
-import { getEmployerPolicyStatus } from "../employer/demoEmployer.ts";
+import { getEmployerPolicyStatus, type EmployerPolicy } from "../employer/demoEmployer.ts";
 
 export interface PayPeriod {
   id: string;
@@ -36,7 +36,7 @@ export function validatePeriod(period: PayPeriod): string[] {
   else if (!Number.isFinite(period.grossWages) || period.grossWages < 0) issues.push("Gross regular wages must be a nonnegative number.");
   return issues;
 }
-export function allocatePayPeriod(days: WorkDay[], period: PayPeriod): PayrollAllocation {
+export function allocatePayPeriod(days: WorkDay[], period: PayPeriod, employer?: EmployerPolicy): PayrollAllocation {
   const selected = days.filter(d => d.date >= period.start && d.date <= period.end);
   const coverage = coverageIssues(selected, period.start, period.end);
   const issues = [...validatePeriod(period), ...coverage];
@@ -76,7 +76,7 @@ export function allocatePayPeriod(days: WorkDay[], period: PayPeriod): PayrollAl
   }
   const rows = parts.map(row => {
     const rule = getReviewedRule(row.state, period.end);
-    if (getEmployerPolicyStatus(row.state) !== "allowed") issues.push(`${row.state}: work is not permitted by employer policy.`);
+    if (getEmployerPolicyStatus(row.state, employer) !== "allowed") issues.push(`${row.state}: work is not permitted by employer policy.`);
     if (!rule) issues.push(`${row.state}: no reviewed rule for this period.`);
     if (rule?.allocation === "annual_workdays") issues.push(`${row.state}: provisional period allocation; annual reconciliation required.`);
     if (rule?.localReview) issues.push(`${row.state}: local tax review required.`);
