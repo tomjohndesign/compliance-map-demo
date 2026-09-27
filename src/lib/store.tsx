@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useEmployer } from "./employer/useEmployer";
+import type { EmployerPolicy } from "./employer/demoEmployer";
 import { DEFAULT_SETTINGS, seedForDate } from "./seed";
 import { todayISO } from "./engine";
 import type { Mode, PlannedStop, Settings, Stay, ThemePref } from "./types";
@@ -23,6 +25,7 @@ const SETTINGS_KEY = "sl-settings-itinerary-2026-09-21";
 const THEME_KEY = "sl-theme";
 
 interface AppState {
+  employer: EmployerPolicy;
   today: string;
   stays: Stay[];
   planned: PlannedStop[];
@@ -61,6 +64,7 @@ function applyTheme(theme: ThemePref) {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { employer, error: employerError } = useEmployer();
   const [today] = useState(todayISO);
   const [seed] = useState(() => seedForDate(today));
   const [stays] = useState<Stay[]>(seed.stays);
@@ -201,8 +205,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppState>(
     () => ({
-      today,
-      ledger, payPeriods, periodRevisions, payrollActive, storageError, saveDay, savePeriod, setPayrollActive,
+      today, employer,
+      ledger, payPeriods, periodRevisions, payrollActive, storageError: storageError ?? employerError, saveDay, savePeriod, setPayrollActive,
       stays,
       planned,
       settings,
@@ -220,7 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       moveStop,
       updateSettings,
     }),
-    [today, ledger, payPeriods, periodRevisions, payrollActive, storageError, saveDay, savePeriod, setPayrollActive, stays, planned, settings, mode, selected, pastView, addHint, setMode, select, addStop, updateStop, removeStop, moveStop, updateSettings]
+    [employer, employerError, today, ledger, payPeriods, periodRevisions, payrollActive, storageError, saveDay, savePeriod, setPayrollActive, stays, planned, settings, mode, selected, pastView, addHint, setMode, select, addStop, updateStop, removeStop, moveStop, updateSettings]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

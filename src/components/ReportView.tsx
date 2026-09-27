@@ -15,7 +15,7 @@ function download(name: string, text: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export function ReportView() {
-  const { today, settings, payPeriods, savePeriod, periodRevisions, ledger, payrollActive, storageError } = useApp();
+  const { today, settings, payPeriods, savePeriod, periodRevisions, ledger, payrollActive, storageError, employer } = useApp();
   const { days, outcomes, workedStates } = useDerived();
   const [start, setStart] = useState(`${today.slice(0, 7)}-01`);
   const [end, setEnd] = useState(today);
@@ -23,7 +23,7 @@ export function ReportView() {
   const [selected, setSelected] = useState(payPeriods.at(-1)?.id ?? "");
   const [error, setError] = useState("");
   const period = payPeriods.find(p => p.id === selected);
-  const report = useMemo(() => period ? allocatePayPeriod(days, period) : undefined, [days, period]);
+  const report = useMemo(() => period ? allocatePayPeriod(days, period, employer) : undefined, [days, period, employer]);
   const [generatedAt] = useState(() => new Date().toISOString());
   const year = today.slice(0, 4);
   const startYear = settings.trackingStart > `${year}-01-01` ? settings.trackingStart : `${year}-01-01`;
@@ -31,7 +31,7 @@ export function ReportView() {
   const stateResults = [...outcomes.values()].filter(o => o.workDays || o.projectedDays || o.code === settings.assignedWorkState);
   const snapshot = () => ({ generatedAt: new Date().toISOString(), employee: "Alex Morgan (fictional demo)", settings, dataThrough: today,
     ruleVersions: [...new Set(stateResults.map(o => o.rule?.version).filter(Boolean))],
-    report, annualOutcomes: stateResults, ledger, days, payPeriods, periodRevisions, payrollActive,
+    employer, report, annualOutcomes: stateResults, ledger, days, payPeriods, periodRevisions, payrollActive,
     scope: "Nonresident regular W-2 wages; state income-tax exposure and withholding; no payroll submission", coverageIssues: coverage });
   const save = (e: React.FormEvent) => {
     e.preventDefault();

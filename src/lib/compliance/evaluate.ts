@@ -1,4 +1,4 @@
-import { getEmployerPolicyStatus } from "../employer/demoEmployer.ts";
+import { getEmployerPolicyStatus, type EmployerPolicy } from "../employer/demoEmployer.ts";
 import { getRule2026 } from "./rules2026.ts";
 import { getReviewedRule, type ReviewedRule } from "./reviewed2026.ts";
 import { evaluateExpression, type Evaluation, type Facts } from "./expression.ts";
@@ -25,6 +25,7 @@ export interface StateOutcome {
   payrollAction: string;
 }
 export interface EvaluationOptions {
+  employer?: EmployerPolicy;
   forecast?: boolean;
   stateWages?: number;
   annualTotalWages?: number;
@@ -83,7 +84,7 @@ export function evaluateState(code: string, days: WorkDay[], settings: Settings,
   if (settings.assignedWorkState && ["NY", "PA", "DE", "CT", "NJ"].includes(settings.assignedWorkState)) reasons.push("Assigned-office sourcing review may affect wages earned outside that state.");
   if (rule?.allocation === "annual_workdays" && wages !== undefined) reasons.push("Wages use provisional pay-period allocation; reconcile the annual workday formula.");
   if (!rule && getRule2026(code)) reasons.push("Only an unverified research baseline exists for this state/year.");
-  const policy = getEmployerPolicyStatus(code);
+  const policy = getEmployerPolicyStatus(code, options.employer);
   const simpleDay = rule?.withholding.type === "condition" && rule.withholding.metric === "workdays" ? rule.withholding : undefined;
   const budget = simpleDay ? simpleDay.value - (simpleDay.comparison === "gte" ? 1 : 0) : undefined;
   const remaining = budget !== undefined && policy === "allowed" && withholding.value !== "unknown" ? Math.max(0, budget - workDays) : undefined;

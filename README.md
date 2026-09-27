@@ -1,12 +1,32 @@
 # State Lines — Work-location and payroll prototype
 
 A Next.js app for a mobile W-2 employee working only in states their employer
-permits. The fictional employer allows CA, CO, FL, GA, IL, MA, NC, NY, PA, TN,
+permits. The initial fictional employer policy allows CA, CO, FL, GA, IL, MA, NC, NY, PA, TN,
 TX, VA and WA. All other jurisdictions default to prohibited for work.
 
 The supplied itinerary is retained as **projected activity**, not an employee
 work attestation. The fictional employee is Alex Morgan, with Tennessee as the
 default domicile and assigned work state. Existing local preferences are retained.
+
+## Employer workspace
+
+Switch to **Employer** in the left sidebar to open `/employer`. Both modes share
+the same three-pane app shell: state list, centered tile map, and detail panel. Explore all
+50 states, add a state to setup, save per-state cost assumptions, and record the
+four setup reviews plus an approval reference to mark a state supported.
+Approvals persist in this browser and feed the employee map, route forecasts and
+payroll report policy checks. Moving a state back to setup revokes permission.
+
+The directory includes sourced foreign-LLC filing benchmarks, 2026 unemployment
+wage bases/base rates and minimum wage references for all 50 states. Administrative
+hours and labor rates are editable planning assumptions; insurance, assessments,
+leave, provider and other overhead require a quote. Unknown costs remain visibly
+incomplete. The initial 13 approvals are demo data, not verified registrations.
+
+See [employer methodology and terms](research/employer/README.md) and the
+[50-state source matrix](research/employer/states.md). This is a planning reference,
+not a comprehensive state/local employment-law database. The existing eight-state
+income-tax review coverage below remains unchanged.
 
 ## Workflow
 
@@ -68,7 +88,9 @@ compliance database. Records and correction history use localStorage; export JSO
 for a portable snapshot. There is no server account, tamper-proof audit log,
 professional legal sign-off, provider integration or automatic form submission.
 Workers' compensation, unemployment, entity registration, corporate nexus, resident
-returns, final tax liability and international employment are outside scope.
+returns, final tax liability and international employment are outside the employee
+tax engine's scope. The employer workspace adds the dated planning references
+described above; it does not calculate complete employer liability.
 
 ## Development and verification
 
